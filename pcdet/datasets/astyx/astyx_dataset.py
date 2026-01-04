@@ -166,7 +166,7 @@ class AstyxDataset(DatasetTemplate):
         def process_single_scene(sample_idx):
             print('%s sample_idx: %s' % (self.split, sample_idx))
             info = {}
-            num_features = 7 if self.pc_type == 'radar' else 4
+            num_features = 5 if self.pc_type == 'radar' else 4
             pc_info = {'num_features': num_features, 'pc_idx': sample_idx}
             info['point_cloud'] = pc_info
 
@@ -265,11 +265,7 @@ class AstyxDataset(DatasetTemplate):
             sample_idx = info['point_cloud']['pc_idx']
             points = self.get_pointcloud(sample_idx, self.pc_type)
             if self.pc_type == 'radar' and points.shape[1] >= 5:
-                phi = np.arctan2(points[:, 1], points[:, 0] + 1e-6)
-                vr = points[:, 4:5]
-                vx = vr * np.cos(phi)
-                vy = vr * np.sin(phi)
-                points = np.concatenate([points[:, :5], vx, vy], axis=1)
+                points = points[:, :5]
             annos = info['annos']
             names = annos['name']
             difficulty = annos['difficulty']
@@ -441,11 +437,7 @@ class AstyxDataset(DatasetTemplate):
         calib = info['calib']
 
         if self.pc_type == 'radar' and points.shape[1] >= 5:
-            phi = np.arctan2(points[:, 1], points[:, 0] + 1e-6)
-            vr = points[:, 4:5]
-            vx = vr * np.cos(phi)
-            vy = vr * np.sin(phi)
-            points = np.concatenate([points[:, :5], vx, vy], axis=1)
+            points = points[:, :5]
 
         img_shape = info['image']['image_shape']
         if self.dataset_cfg.FOV_POINTS_ONLY and img_shape.sum() > 0:

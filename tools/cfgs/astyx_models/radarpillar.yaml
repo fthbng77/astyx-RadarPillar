@@ -29,6 +29,7 @@ MODEL:
         WITH_DISTANCE: False
         USE_ABSLOTE_XYZ: True
         USE_NORM: True
+        USE_VELOCITY_DECOMPOSITION: True
         NUM_FILTERS: [64]
 
     BACKBONE_3D:

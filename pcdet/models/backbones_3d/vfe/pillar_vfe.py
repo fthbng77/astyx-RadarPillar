@@ -56,6 +56,9 @@ class PillarVFE(VFETemplate):
         self.use_norm = self.model_cfg.USE_NORM
         self.with_distance = self.model_cfg.WITH_DISTANCE
         self.use_absolute_xyz = self.model_cfg.USE_ABSLOTE_XYZ
+        self.use_velocity_decomposition = self.model_cfg.get('USE_VELOCITY_DECOMPOSITION', False)
+        if self.use_velocity_decomposition:
+            num_point_features += 2
         num_point_features += 6 if self.use_absolute_xyz else 3
         if self.with_distance:
             num_point_features += 1
@@ -101,6 +104,14 @@ class PillarVFE(VFETemplate):
         f_center[:, :, 0] = voxel_features[:, :, 0] - (coords[:, 3].to(voxel_features.dtype).unsqueeze(1) * self.voxel_x + self.x_offset)
         f_center[:, :, 1] = voxel_features[:, :, 1] - (coords[:, 2].to(voxel_features.dtype).unsqueeze(1) * self.voxel_y + self.y_offset)
         f_center[:, :, 2] = voxel_features[:, :, 2] - (coords[:, 1].to(voxel_features.dtype).unsqueeze(1) * self.voxel_z + self.z_offset)
+
+        if self.use_velocity_decomposition:
+            phi = torch.atan2(voxel_features[:, :, 1], voxel_features[:, :, 0] + 1e-6)
+            vr = voxel_features[:, :, 4]
+            vx = vr * torch.cos(phi)
+            vy = vr * torch.sin(phi)
+            velocity = torch.stack([vx, vy], dim=-1)
+            voxel_features = torch.cat([voxel_features, velocity], dim=-1)
 
         if self.use_absolute_xyz:
             features = [voxel_features, f_cluster, f_center]
