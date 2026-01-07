@@ -13,6 +13,7 @@ MODEL:
         USE_ABSLOTE_XYZ: True
         USE_NORM: True
         USE_VELOCITY_DECOMPOSITION: True
+        USE_VELOCITY_OFFSET: True
         NUM_FILTERS: [32]
 
     BACKBONE_3D:
@@ -97,7 +98,7 @@ MODEL:
         SCORE_THRESH: 0.1
         OUTPUT_RAW_SCORE: False
 
-        EVAL_METRIC: kitti
+        EVAL_METRIC: vod
 
         NMS_CONFIG:
             MULTI_CLASSES_NMS: False

@@ -57,8 +57,11 @@ class PillarVFE(VFETemplate):
         self.with_distance = self.model_cfg.WITH_DISTANCE
         self.use_absolute_xyz = self.model_cfg.USE_ABSLOTE_XYZ
         self.use_velocity_decomposition = self.model_cfg.get('USE_VELOCITY_DECOMPOSITION', False)
+        self.use_velocity_offset = self.model_cfg.get('USE_VELOCITY_OFFSET', False)
         if self.use_velocity_decomposition:
-            num_point_features += 2
+            num_point_features += 2  # vx, vy
+        if self.use_velocity_offset:
+            num_point_features += 1  # vr_offset (vr,m)
         num_point_features += 6 if self.use_absolute_xyz else 3
         if self.with_distance:
             num_point_features += 1
@@ -112,6 +115,16 @@ class PillarVFE(VFETemplate):
             vy = vr * torch.sin(phi)
             velocity = torch.stack([vx, vy], dim=-1)
             voxel_features = torch.cat([voxel_features, velocity], dim=-1)
+
+        if self.use_velocity_offset:
+            # Calculate offset velocity (vr,m) as described in RadarPillars paper
+            # Mean velocity per pillar, then subtract from each point's velocity
+            vr = voxel_features[:, :, 4]  # radial velocity
+            mask = self.get_paddings_indicator(voxel_num_points, vr.shape[1], axis=0)
+            vr_masked = vr * mask.float()
+            vr_mean = vr_masked.sum(dim=1, keepdim=True) / voxel_num_points.float().unsqueeze(1).clamp(min=1)
+            vr_offset = vr - vr_mean  # offset from pillar mean velocity
+            voxel_features = torch.cat([voxel_features, vr_offset.unsqueeze(-1)], dim=-1)
 
         if self.use_absolute_xyz:
             features = [voxel_features, f_cluster, f_center]

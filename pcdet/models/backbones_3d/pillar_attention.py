@@ -22,7 +22,7 @@ class PillarAttention(nn.Module):
         self.norm1 = nn.LayerNorm(input_channels) if use_layer_norm else None
         self.ffn = nn.Sequential(
             nn.Linear(input_channels, ffn_channels),
-            nn.ReLU(),
+            nn.GELU(),
             nn.Linear(ffn_channels, input_channels),
         )
         self.norm2 = nn.LayerNorm(input_channels) if use_layer_norm else None
