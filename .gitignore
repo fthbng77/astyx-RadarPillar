@@ -11,3 +11,4 @@ pcdet/version.py
 pcdet.egg-info/
 *.so
 .venv/
+data/VoD/

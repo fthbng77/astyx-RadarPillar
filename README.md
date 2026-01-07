@@ -17,7 +17,7 @@ Bu fork, Astyx radar verisi ile radar-only PointPillar eğitimi için düzenlenm
 
 
 ## Changelog
-[2026-01] Astyx radar pipeline: 7 özellikli (x,y,z,rcs,vr,vx,vy) point loader, hız uyumlu augmentasyonlar, `tools/cfgs/astyx_models/radarpillar.yaml`.
+[2026-01] Astyx radar pipeline: 7 özellikli (x,y,z,rcs,vr,vx,vy) point loader, hız uyumlu augmentasyonlar, `tools/cfgs/astyx_models/astyx_radarpillar.yaml`.
 
 ## Astyx Radar Quickstart
 
@@ -35,11 +35,11 @@ Bu fork, Astyx radar verisi ile radar-only PointPillar eğitimi için düzenlenm
   ```
 - Eğitim (PointPillar, 0.2 m x-y, 4 m z pillar):
   ```bash
-  CUDA_VISIBLE_DEVICES=0 python tools/train.py --cfg_file tools/cfgs/astyx_models/radarpillar.yaml --batch_size 4
+  CUDA_VISIBLE_DEVICES=0 python tools/train.py --cfg_file tools/cfgs/astyx_models/astyx_radarpillar.yaml --batch_size 4
   ```
 - Eval:
   ```bash
-  CUDA_VISIBLE_DEVICES=0 python test.py --cfg_file tools/cfgs/astyx_models/radarpillar.yaml --ckpt <ckpt_path>
+  CUDA_VISIBLE_DEVICES=0 python test.py --cfg_file tools/cfgs/astyx_models/astyx_radarpillar.yaml --ckpt <ckpt_path>
   ```
 
 

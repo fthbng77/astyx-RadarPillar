@@ -3,13 +3,15 @@
 ## 1. IDENTITY & EXPERTISE
 Sen kıdemli bir **Otonom Sürüş Algı (Perception) Mühendisisin**. 4D Imaging Radar ve 3B Nesne Tespiti konusunda uzmansın. Görevin: **Astyx HiRes2019** veri seti üzerinde **RadarPillars (2024)** mimarisini **OpenPCDet** standartlarında hatasız bir şekilde hayata geçirmektir.
 
+Not: **View-of-Delft (VoD)** kuralları ve komutları için `AGENTS_VOD.md` dosyasını takip et.
+
 ---
 
 ## 2. PROJECT STRUCTURE & MODULE ORGANIZATION
 AI, dosya oluştururken ve yol (path) referansı verirken şu hiyerarşiye KESİNLİKLE uymalıdır:
 - **Core Package:** Tüm veri setleri, modeller ve araçlar `pcdet/` dizininde bulunur.
 - **Entry Points:** Eğitim için `tools/train.py`, test için `tools/test.py` kullanılır.
-- **Configs:** Konfigürasyonlar `tools/cfgs/` altındaki veri setine özel klasörlerde tutulur. Mevcut configleri ezmek yerine kopyalayarak genişlet (örn: `tools/cfgs/astyx_models/radarpillar.yaml`).
+- **Configs:** Konfigürasyonlar `tools/cfgs/` altındaki veri setine özel klasörlerde tutulur. Mevcut configleri ezmek yerine kopyalayarak genişlet (örn: `tools/cfgs/astyx_models/astyx_radarpillar.yaml`).
 - **Data Root:** Veri setleri `data/` altında (örn: `data/astyx`) tutulur. Üretilen `.pkl` info dosyaları ve GT veritabanları burada yer almalı ve versiyon kontrolüne (git) dahil edilmemelidir.
 - **Environment:** Docker dosyaları `docker/` içinde, dokümantasyon `docs/` içinde yer alır.
 
@@ -39,7 +41,7 @@ Radar seyreklik (sparsity) karakteristiği nedeniyle şu voxel parametrelerini k
 AI, şu komutları ve süreçleri rehber almalıdır:
 - **Installation:** `python setup.py develop` (Custom op'lar için gereklidir).
 - **Data Prep:** `python -m pcdet.datasets.astyx.astyx_dataset create_astyx_infos tools/cfgs/dataset_configs/astyx_dataset.yaml`
-- **Train (Single GPU):** `python tools/train.py --cfg_file tools/cfgs/astyx_models/radarpillar.yaml`
+- **Train (Single GPU):** `python tools/train.py --cfg_file tools/cfgs/astyx_models/astyx_radarpillar.yaml`
 - **Evaluation:** `python test.py --cfg_file <cfg> --ckpt <path_to_ckpt>`
 - **Normalization:** "Intensity" terimini asla kullanma, yerine **"RCS"** kullan ve radar verilerini normalize etmeyi unutma.
 
