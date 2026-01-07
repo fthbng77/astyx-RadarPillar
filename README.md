@@ -1,13 +1,17 @@
 <img src="docs/open_mmlab.png" align="right" width="30%">
 
-# OpenPCDet (Astyx Radar Pillar)
+# RadarPillars: Efficient Object Detection from 4D Radar Point Clouds
+## OpenPCDet (Astyx + VoD)
 
-Bu fork, Astyx radar verisi ile radar-only PointPillar eğitimi için düzenlenmiş OpenPCDet türevidir. LiDAR/çekirdek kod korunurken, görüntü bağımlılıkları kaldırıldı ve radar hız/rcs özellikleri eklendi.
+Bu fork, Astyx ve View-of-Delft (VoD) radar verileri ile radar-only RadarPillars/PointPillar
+eğitimi için düzenlenmiş OpenPCDet türevidir. LiDAR/çekirdek kod korunurken, görüntü
+bağımlılıkları kaldırıldı ve radar hız/rcs özellikleri eklendi.
 
 
 ## Overview
 - [Changelog](#changelog)
 - [Astyx Radar Quickstart](#astyx-radar-quickstart)
+- [VoD Radar Quickstart](#vod-radar-quickstart)
 - [Design Pattern](#openpcdet-design-pattern)
 - [Model Zoo](#model-zoo)
 - [Installation](docs/INSTALL.md)
@@ -18,6 +22,7 @@ Bu fork, Astyx radar verisi ile radar-only PointPillar eğitimi için düzenlenm
 
 ## Changelog
 [2026-01] Astyx radar pipeline: 7 özellikli (x,y,z,rcs,vr,vx,vy) point loader, hız uyumlu augmentasyonlar, `tools/cfgs/astyx_models/astyx_radarpillar.yaml`.
+[2026-02] VoD radar pipeline: dataset config, info üretimi, `tools/cfgs/vod_models/vod_radarpillar.yaml`.
 
 ## Astyx Radar Quickstart
 
@@ -40,6 +45,38 @@ Bu fork, Astyx radar verisi ile radar-only PointPillar eğitimi için düzenlenm
 - Eval:
   ```bash
   CUDA_VISIBLE_DEVICES=0 python test.py --cfg_file tools/cfgs/astyx_models/astyx_radarpillar.yaml --ckpt <ckpt_path>
+  ```
+
+## VoD Radar Quickstart
+
+- Veri yapısı: `data/VoD/view_of_delft_PUBLIC/radar_5frames` altında radar verisi ve anotasyonlar.
+- Train/val/test split dosyaları (ImageSets) örnek yerleşim:
+  ```text
+  data/VoD/view_of_delft_PUBLIC/radar_5frames/
+    ImageSets/
+      train.txt
+      val.txt
+      test.txt
+    training/
+      velodyne/
+      label_2/
+      calib/
+      image_2/
+      planes/
+    testing/
+      velodyne/
+  ```
+- Info + gt database üretimi:
+  ```bash
+  python -m pcdet.datasets.vod.vod_dataset create_vod_infos tools/cfgs/dataset_configs/vod_dataset_radar.yaml
+  ```
+- Eğitim:
+  ```bash
+  CUDA_VISIBLE_DEVICES=0 python tools/train.py --cfg_file tools/cfgs/vod_models/vod_radarpillar.yaml --batch_size 4
+  ```
+- Eval:
+  ```bash
+  CUDA_VISIBLE_DEVICES=0 python test.py --cfg_file tools/cfgs/vod_models/vod_radarpillar.yaml --ckpt <ckpt_path>
   ```
 
 
