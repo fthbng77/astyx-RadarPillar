@@ -746,6 +746,89 @@ def get_official_eval_result(gt_annos, dt_annos, current_classes, PR_detail_dict
     return result, ret_dict
 
 
+def get_vod_eval_result(gt_annos, dt_annos, current_classes, PR_detail_dict=None):
+    overlap_vod = np.array([
+        [0.5, 0.25, 0.25],
+        [0.5, 0.25, 0.25],
+        [0.5, 0.25, 0.25],
+    ])
+    min_overlaps = overlap_vod[None, ...]
+    class_to_name = {
+        0: 'Car',
+        1: 'Pedestrian',
+        2: 'Cyclist',
+    }
+    name_to_class = {v: n for n, v in class_to_name.items()}
+    if not isinstance(current_classes, (list, tuple)):
+        current_classes = [current_classes]
+    current_classes_int = []
+    for curcls in current_classes:
+        if isinstance(curcls, str):
+            current_classes_int.append(name_to_class[curcls])
+        else:
+            current_classes_int.append(curcls)
+    current_classes = current_classes_int
+    min_overlaps = min_overlaps[:, :, current_classes]
+
+    result = ''
+    compute_aos = False
+    for anno in dt_annos:
+        if anno['alpha'].shape[0] != 0:
+            if anno['alpha'][0] != -10:
+                compute_aos = True
+            break
+
+    mAPbbox, mAPbev, mAP3d, mAPaos, mAPbbox_R40, mAPbev_R40, mAP3d_R40, mAPaos_R40 = do_eval(
+        gt_annos, dt_annos, current_classes, min_overlaps, compute_aos, PR_detail_dict=PR_detail_dict)
+
+    ret_dict = {}
+    for j, curcls in enumerate(current_classes):
+        for i in range(min_overlaps.shape[0]):
+            result += print_str(
+                (f"{class_to_name[curcls]} "
+                 "AP@{:.2f}, {:.2f}, {:.2f}:".format(*min_overlaps[i, :, j])))
+            result += print_str((f"bbox AP:{mAPbbox[j, 0, i]:.4f}, "
+                                 f"{mAPbbox[j, 1, i]:.4f}, "
+                                 f"{mAPbbox[j, 2, i]:.4f}"))
+            result += print_str((f"bev  AP:{mAPbev[j, 0, i]:.4f}, "
+                                 f"{mAPbev[j, 1, i]:.4f}, "
+                                 f"{mAPbev[j, 2, i]:.4f}"))
+            result += print_str((f"3d   AP:{mAP3d[j, 0, i]:.4f}, "
+                                 f"{mAP3d[j, 1, i]:.4f}, "
+                                 f"{mAP3d[j, 2, i]:.4f}"))
+
+            if compute_aos:
+                result += print_str((f"aos  AP:{mAPaos[j, 0, i]:.2f}, "
+                                     f"{mAPaos[j, 1, i]:.2f}, "
+                                     f"{mAPaos[j, 2, i]:.2f}"))
+
+            result += print_str(
+                (f"{class_to_name[curcls]} "
+                 "AP_R40@{:.2f}, {:.2f}, {:.2f}:".format(*min_overlaps[i, :, j])))
+            result += print_str((f"bbox AP:{mAPbbox_R40[j, 0, i]:.4f}, "
+                                 f"{mAPbbox_R40[j, 1, i]:.4f}, "
+                                 f"{mAPbbox_R40[j, 2, i]:.4f}"))
+            result += print_str((f"bev  AP:{mAPbev_R40[j, 0, i]:.4f}, "
+                                 f"{mAPbev_R40[j, 1, i]:.4f}, "
+                                 f"{mAPbev_R40[j, 2, i]:.4f}"))
+            result += print_str((f"3d   AP:{mAP3d_R40[j, 0, i]:.4f}, "
+                                 f"{mAP3d_R40[j, 1, i]:.4f}, "
+                                 f"{mAP3d_R40[j, 2, i]:.4f}"))
+            if compute_aos:
+                result += print_str((f"aos  AP:{mAPaos_R40[j, 0, i]:.2f}, "
+                                     f"{mAPaos_R40[j, 1, i]:.2f}, "
+                                     f"{mAPaos_R40[j, 2, i]:.2f}"))
+
+            if i == 0:
+                ret_dict['%s_3d/easy_R40' % class_to_name[curcls]] = mAP3d_R40[j, 0, 0]
+                ret_dict['%s_3d/moderate_R40' % class_to_name[curcls]] = mAP3d_R40[j, 1, 0]
+                ret_dict['%s_3d/hard_R40' % class_to_name[curcls]] = mAP3d_R40[j, 2, 0]
+                ret_dict['%s_bev/easy_R40' % class_to_name[curcls]] = mAPbev_R40[j, 0, 0]
+                ret_dict['%s_bev/moderate_R40' % class_to_name[curcls]] = mAPbev_R40[j, 1, 0]
+                ret_dict['%s_bev/hard_R40' % class_to_name[curcls]] = mAPbev_R40[j, 2, 0]
+
+    return result, ret_dict
+
 def get_coco_eval_result(gt_annos, dt_annos, current_classes):
     class_to_name = {
         0: 'Car',

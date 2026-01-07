@@ -11,7 +11,7 @@ AI, dosya oluştururken ve yol (path) referansı verirken şu hiyerarşiye KESİ
 - **Entry Points:** Eğitim için `tools/train.py`, test için `tools/test.py` kullanılır.
 - **Configs (VoD):** Konfigürasyonlar `tools/cfgs/vod_models/` altında tutulur. Mevcut configleri ezmek yerine kopyalayarak genişlet (örn: `tools/cfgs/vod_models/vod_radarpillar.yaml`).
 - **Dataset Configs (VoD):** Veri seti configleri `tools/cfgs/dataset_configs/` altında tutulur (örn: `tools/cfgs/dataset_configs/vod_dataset_radar.yaml`).
-- **Data Root (VoD):** Veri seti kökü `data/vod` olmalıdır. Üretilen `.pkl` info dosyaları ve GT veritabanları burada yer almalı ve versiyon kontrolüne (git) dahil edilmemelidir.
+- **Data Root (VoD):** Veri seti kökü `data/VoD` olmalıdır. Üretilen `.pkl` info dosyaları ve GT veritabanları burada yer almalı ve versiyon kontrolüne (git) dahil edilmemelidir.
 - **Environment:** Docker dosyaları `docker/` içinde, dokümantasyon `docs/` içinde yer alır.
 
 ---

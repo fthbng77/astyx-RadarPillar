@@ -33,7 +33,7 @@ class VodDataset(DatasetTemplate):
         self.include_vod_data(self.mode)
 
         self.radar_feature_order = ['x', 'y', 'z', 'rcs', 'v_r', 'v_r_comp', 'time']
-        self.selected_feature_list = list(self.dataset_cfg.POINT_FEATURE_ENCODING.src_feature_list)
+        self.selected_feature_list = list(self.dataset_cfg.POINT_FEATURE_ENCODING.used_feature_list)
         self.selected_feature_idx = [self.radar_feature_order.index(x) for x in self.selected_feature_list]
 
         norm_cfg = self.dataset_cfg.get('POINT_FEATURE_NORMALIZATION', None)
@@ -174,6 +174,22 @@ class VodDataset(DatasetTemplate):
             if has_label:
                 obj_list = self.get_label(sample_idx)
                 annotations = {}
+                if len(obj_list) == 0:
+                    annotations['name'] = np.array([], dtype=np.str_)
+                    annotations['truncated'] = np.array([], dtype=np.float32)
+                    annotations['occluded'] = np.array([], dtype=np.float32)
+                    annotations['alpha'] = np.array([], dtype=np.float32)
+                    annotations['bbox'] = np.zeros((0, 4), dtype=np.float32)
+                    annotations['dimensions'] = np.zeros((0, 3), dtype=np.float32)
+                    annotations['location'] = np.zeros((0, 3), dtype=np.float32)
+                    annotations['rotation_y'] = np.array([], dtype=np.float32)
+                    annotations['score'] = np.array([], dtype=np.float32)
+                    annotations['difficulty'] = np.array([], dtype=np.int32)
+                    annotations['index'] = np.array([], dtype=np.int32)
+                    annotations['gt_boxes_lidar'] = np.zeros((0, 7), dtype=np.float32)
+                    info['annos'] = annotations
+                    return info
+
                 annotations['name'] = np.array([obj.cls_type for obj in obj_list])
                 annotations['truncated'] = np.array([obj.truncation for obj in obj_list])
                 annotations['occluded'] = np.array([obj.occlusion for obj in obj_list])
@@ -252,7 +268,7 @@ class VodDataset(DatasetTemplate):
             for i in range(num_obj):
                 filename = '%s_%s_%d.bin' % (sample_idx, names[i], i)
                 filepath = database_save_path / filename
-                gt_points = points[point_indices[:, i] > 0]
+                gt_points = points[point_indices[i] > 0]
 
                 gt_points[:, :3] -= gt_boxes[i, :3]
                 with open(filepath, 'w') as f:
@@ -281,6 +297,18 @@ class VodDataset(DatasetTemplate):
 
         return len(self.vod_infos)
 
+    def evaluation(self, det_annos, class_names, **kwargs):
+        if 'annos' not in self.vod_infos[0].keys():
+            return None, {}
+
+        from ..kitti.kitti_object_eval_python import eval as kitti_eval
+
+        eval_det_annos = copy.deepcopy(det_annos)
+        eval_gt_annos = [copy.deepcopy(info['annos']) for info in self.vod_infos]
+        ap_result_str, ap_dict = kitti_eval.get_vod_eval_result(eval_gt_annos, eval_det_annos, class_names)
+
+        return ap_result_str, ap_dict
+
     def __getitem__(self, index):
         if self._merge_all_iters_to_one_epoch:
             index = index % len(self.vod_infos)
@@ -306,10 +334,13 @@ class VodDataset(DatasetTemplate):
         if 'annos' in info:
             annos = info['annos']
             annos = common_utils.drop_info_with_name(annos, name='DontCare')
-            loc, dims, rots = annos['location'], annos['dimensions'], annos['rotation_y']
             gt_names = annos['name']
-            gt_boxes_camera = np.concatenate([loc, dims, rots[..., np.newaxis]], axis=1).astype(np.float32)
-            gt_boxes_lidar = box_utils.boxes3d_kitti_camera_to_lidar(gt_boxes_camera, calib)
+            if gt_names.shape[0] > 0:
+                loc, dims, rots = annos['location'], annos['dimensions'], annos['rotation_y']
+                gt_boxes_camera = np.concatenate([loc, dims, rots[..., np.newaxis]], axis=1).astype(np.float32)
+                gt_boxes_lidar = box_utils.boxes3d_kitti_camera_to_lidar(gt_boxes_camera, calib)
+            else:
+                gt_boxes_lidar = np.zeros((0, 7), dtype=np.float32)
 
             input_dict.update({
                 'gt_names': gt_names,
