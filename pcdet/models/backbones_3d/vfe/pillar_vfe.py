@@ -58,6 +58,22 @@ class PillarVFE(VFETemplate):
         self.use_absolute_xyz = self.model_cfg.USE_ABSLOTE_XYZ
         self.use_velocity_decomposition = self.model_cfg.get('USE_VELOCITY_DECOMPOSITION', False)
         self.use_velocity_offset = self.model_cfg.get('USE_VELOCITY_OFFSET', False)
+        self.normalize_velocity_comp = self.model_cfg.get('NORMALIZE_VELOCITY_COMP', False)
+        if self.normalize_velocity_comp:
+            velocity_comp_mean = self.model_cfg.get('VELOCITY_COMP_MEAN', None)
+            velocity_comp_std = self.model_cfg.get('VELOCITY_COMP_STD', None)
+            if velocity_comp_mean is None or velocity_comp_std is None:
+                raise ValueError('VELOCITY_COMP_MEAN/STD must be set when NORMALIZE_VELOCITY_COMP is True')
+            if len(velocity_comp_mean) != 2 or len(velocity_comp_std) != 2:
+                raise ValueError('VELOCITY_COMP_MEAN/STD must be length 2 for [vx, vy]')
+            self.register_buffer(
+                'velocity_comp_mean',
+                torch.tensor(velocity_comp_mean, dtype=torch.float32).view(1, 1, 2)
+            )
+            self.register_buffer(
+                'velocity_comp_std',
+                torch.tensor(velocity_comp_std, dtype=torch.float32).view(1, 1, 2)
+            )
         if self.use_velocity_decomposition:
             num_point_features += 2  # vx, vy
         if self.use_velocity_offset:
@@ -114,6 +130,11 @@ class PillarVFE(VFETemplate):
             vx = vr * torch.cos(phi)
             vy = vr * torch.sin(phi)
             velocity = torch.stack([vx, vy], dim=-1)
+            if self.normalize_velocity_comp:
+                # (1, 1, 2) stats broadcast over (num_voxels, num_points, 2)
+                mean = self.velocity_comp_mean.type_as(velocity)
+                std = self.velocity_comp_std.type_as(velocity).clamp(min=1e-6)
+                velocity = (velocity - mean) / std
             voxel_features = torch.cat([voxel_features, velocity], dim=-1)
 
         if self.use_velocity_offset:

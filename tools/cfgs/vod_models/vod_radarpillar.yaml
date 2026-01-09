@@ -13,11 +13,15 @@ MODEL:
         USE_ABSLOTE_XYZ: True
         USE_NORM: True
         USE_VELOCITY_DECOMPOSITION: True
-        USE_VELOCITY_OFFSET: True
+        USE_VELOCITY_OFFSET: False
+        NORMALIZE_VELOCITY_COMP: True
+        VELOCITY_COMP_MEAN: [0.053785, -0.003549]
+        VELOCITY_COMP_STD: [1.002379, 0.507088]
         NUM_FILTERS: [32]
 
     BACKBONE_3D:
         NAME: PillarAttention
+        ATTN_CHANNELS: 32
         NUM_HEADS: 1
         DROPOUT: 0.0
         FFN_CHANNELS: 32

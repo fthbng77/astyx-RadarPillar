@@ -12,3 +12,4 @@ pcdet.egg-info/
 *.so
 .venv/
 data/VoD/
+wandb/

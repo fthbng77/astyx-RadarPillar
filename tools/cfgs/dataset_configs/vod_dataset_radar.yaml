@@ -23,14 +23,14 @@ CLASS_MAPPINGS: {
 
 POINT_FEATURE_ENCODING: {
     encoding_type: absolute_coordinates_encoding,
-    used_feature_list: ['x', 'y', 'z', 'rcs', 'v_r_comp'],
-    src_feature_list: ['x', 'y', 'z', 'rcs', 'v_r_comp'],
+    used_feature_list: ['x', 'y', 'z', 'rcs', 'v_r_comp', 'time'],
+    src_feature_list: ['x', 'y', 'z', 'rcs', 'v_r_comp', 'time'],
 }
 
 POINT_FEATURE_NORMALIZATION: {
     USE_NORM: True,
-    MEAN: [0.0, 0.0, 0.0, -12.4096, 0.0391],
-    STD: [1.0, 1.0, 1.0, 14.0396, 2.0750],
+    MEAN: [0.0, 0.0, 0.0, -12.4096, 0.0391, -1.9941],
+    STD: [1.0, 1.0, 1.0, 14.0396, 2.0750, 1.4142],
 }
 
 DATA_AUGMENTOR:
