@@ -18,19 +18,23 @@ FOV_POINTS_ONLY: True
 CLASS_MAPPINGS: {
     'bicycle': 'Cyclist',
     'rider': 'Cyclist',
-    'Cyclist': 'Cyclist'
+    'Cyclist': 'Cyclist',
+    'moped_scooter': 'Cyclist',
+    'motor': 'Cyclist',
+    'ride_other': 'Cyclist',
+    'ride_uncertain': 'Cyclist'
 }
 
 POINT_FEATURE_ENCODING: {
     encoding_type: absolute_coordinates_encoding,
-    used_feature_list: ['x', 'y', 'z', 'rcs', 'v_r_comp', 'time'],
-    src_feature_list: ['x', 'y', 'z', 'rcs', 'v_r_comp', 'time'],
+    used_feature_list: ['x', 'y', 'z', 'rcs', 'v_r', 'v_r_comp', 'time'],
+    src_feature_list: ['x', 'y', 'z', 'rcs', 'v_r', 'v_r_comp', 'time'],
 }
 
 POINT_FEATURE_NORMALIZATION: {
     USE_NORM: True,
-    MEAN: [0.0, 0.0, 0.0, -12.4096, 0.0391, -1.9941],
-    STD: [1.0, 1.0, 1.0, 14.0396, 2.0750, 1.4142],
+    MEAN: [0.0, 0.0, 0.0, -12.7030, -3.5275, 0.1117, -1.9941],
+    STD: [1.0, 1.0, 1.0, 14.0523, 3.3211, 2.3325, 1.4142],
 }
 
 DATA_AUGMENTOR:

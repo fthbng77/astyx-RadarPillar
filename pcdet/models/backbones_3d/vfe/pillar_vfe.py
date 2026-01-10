@@ -57,8 +57,13 @@ class PillarVFE(VFETemplate):
         self.with_distance = self.model_cfg.WITH_DISTANCE
         self.use_absolute_xyz = self.model_cfg.USE_ABSLOTE_XYZ
         self.use_velocity_decomposition = self.model_cfg.get('USE_VELOCITY_DECOMPOSITION', False)
+        self.use_rel_velocity_decomposition = self.model_cfg.get('USE_REL_VELOCITY_DECOMPOSITION', False)
         self.use_velocity_offset = self.model_cfg.get('USE_VELOCITY_OFFSET', False)
+        self.use_rel_velocity_offset = self.model_cfg.get('USE_REL_VELOCITY_OFFSET', False)
+        self.velocity_comp_index = self.model_cfg.get('VELOCITY_COMP_INDEX', 4)
+        self.velocity_rel_index = self.model_cfg.get('VELOCITY_REL_INDEX', None)
         self.normalize_velocity_comp = self.model_cfg.get('NORMALIZE_VELOCITY_COMP', False)
+        self.normalize_velocity_rel = self.model_cfg.get('NORMALIZE_VELOCITY_REL', False)
         if self.normalize_velocity_comp:
             velocity_comp_mean = self.model_cfg.get('VELOCITY_COMP_MEAN', None)
             velocity_comp_std = self.model_cfg.get('VELOCITY_COMP_STD', None)
@@ -74,10 +79,31 @@ class PillarVFE(VFETemplate):
                 'velocity_comp_std',
                 torch.tensor(velocity_comp_std, dtype=torch.float32).view(1, 1, 2)
             )
+        if self.normalize_velocity_rel:
+            velocity_rel_mean = self.model_cfg.get('VELOCITY_REL_MEAN', None)
+            velocity_rel_std = self.model_cfg.get('VELOCITY_REL_STD', None)
+            if velocity_rel_mean is None or velocity_rel_std is None:
+                raise ValueError('VELOCITY_REL_MEAN/STD must be set when NORMALIZE_VELOCITY_REL is True')
+            if len(velocity_rel_mean) != 2 or len(velocity_rel_std) != 2:
+                raise ValueError('VELOCITY_REL_MEAN/STD must be length 2 for [vx, vy]')
+            self.register_buffer(
+                'velocity_rel_mean',
+                torch.tensor(velocity_rel_mean, dtype=torch.float32).view(1, 1, 2)
+            )
+            self.register_buffer(
+                'velocity_rel_std',
+                torch.tensor(velocity_rel_std, dtype=torch.float32).view(1, 1, 2)
+            )
+        if (self.use_rel_velocity_decomposition or self.use_rel_velocity_offset) and self.velocity_rel_index is None:
+            raise ValueError('VELOCITY_REL_INDEX must be set when using relative velocity features')
         if self.use_velocity_decomposition:
             num_point_features += 2  # vx, vy
+        if self.use_rel_velocity_decomposition:
+            num_point_features += 2  # vx_rel, vy_rel
         if self.use_velocity_offset:
             num_point_features += 1  # vr_offset (vr,m)
+        if self.use_rel_velocity_offset:
+            num_point_features += 1  # vrel_offset (vrel,m)
         num_point_features += 6 if self.use_absolute_xyz else 3
         if self.with_distance:
             num_point_features += 1
@@ -124,28 +150,50 @@ class PillarVFE(VFETemplate):
         f_center[:, :, 1] = voxel_features[:, :, 1] - (coords[:, 2].to(voxel_features.dtype).unsqueeze(1) * self.voxel_y + self.y_offset)
         f_center[:, :, 2] = voxel_features[:, :, 2] - (coords[:, 1].to(voxel_features.dtype).unsqueeze(1) * self.voxel_z + self.z_offset)
 
+        base_features = voxel_features
+        phi = torch.atan2(base_features[:, :, 1], base_features[:, :, 0] + 1e-6)
+
+        if self.use_rel_velocity_decomposition:
+            v_rel = base_features[:, :, self.velocity_rel_index]
+            vx_rel = v_rel * torch.cos(phi)
+            vy_rel = v_rel * torch.sin(phi)
+            velocity_rel = torch.stack([vx_rel, vy_rel], dim=-1)
+            if self.normalize_velocity_rel:
+                mean = self.velocity_rel_mean.type_as(velocity_rel)
+                std = self.velocity_rel_std.type_as(velocity_rel).clamp(min=1e-6)
+                velocity_rel = (velocity_rel - mean) / std
+            voxel_features = torch.cat([voxel_features, velocity_rel], dim=-1)
+
         if self.use_velocity_decomposition:
-            phi = torch.atan2(voxel_features[:, :, 1], voxel_features[:, :, 0] + 1e-6)
-            vr = voxel_features[:, :, 4]
-            vx = vr * torch.cos(phi)
-            vy = vr * torch.sin(phi)
-            velocity = torch.stack([vx, vy], dim=-1)
+            v_comp = base_features[:, :, self.velocity_comp_index]
+            vx_comp = v_comp * torch.cos(phi)
+            vy_comp = v_comp * torch.sin(phi)
+            velocity_comp = torch.stack([vx_comp, vy_comp], dim=-1)
             if self.normalize_velocity_comp:
                 # (1, 1, 2) stats broadcast over (num_voxels, num_points, 2)
-                mean = self.velocity_comp_mean.type_as(velocity)
-                std = self.velocity_comp_std.type_as(velocity).clamp(min=1e-6)
-                velocity = (velocity - mean) / std
-            voxel_features = torch.cat([voxel_features, velocity], dim=-1)
+                mean = self.velocity_comp_mean.type_as(velocity_comp)
+                std = self.velocity_comp_std.type_as(velocity_comp).clamp(min=1e-6)
+                velocity_comp = (velocity_comp - mean) / std
+            voxel_features = torch.cat([voxel_features, velocity_comp], dim=-1)
+
+        if self.use_rel_velocity_offset or self.use_velocity_offset:
+            mask = self.get_paddings_indicator(voxel_num_points, base_features.shape[1], axis=0)
+            mask = mask.float()
+
+        if self.use_rel_velocity_offset:
+            v_rel = base_features[:, :, self.velocity_rel_index]
+            v_rel_masked = v_rel * mask
+            v_rel_mean = v_rel_masked.sum(dim=1, keepdim=True) / voxel_num_points.float().unsqueeze(1).clamp(min=1)
+            v_rel_offset = v_rel - v_rel_mean
+            voxel_features = torch.cat([voxel_features, v_rel_offset.unsqueeze(-1)], dim=-1)
 
         if self.use_velocity_offset:
             # Calculate offset velocity (vr,m) as described in RadarPillars paper
-            # Mean velocity per pillar, then subtract from each point's velocity
-            vr = voxel_features[:, :, 4]  # radial velocity
-            mask = self.get_paddings_indicator(voxel_num_points, vr.shape[1], axis=0)
-            vr_masked = vr * mask.float()
-            vr_mean = vr_masked.sum(dim=1, keepdim=True) / voxel_num_points.float().unsqueeze(1).clamp(min=1)
-            vr_offset = vr - vr_mean  # offset from pillar mean velocity
-            voxel_features = torch.cat([voxel_features, vr_offset.unsqueeze(-1)], dim=-1)
+            v_comp = base_features[:, :, self.velocity_comp_index]
+            v_comp_masked = v_comp * mask
+            v_comp_mean = v_comp_masked.sum(dim=1, keepdim=True) / voxel_num_points.float().unsqueeze(1).clamp(min=1)
+            v_comp_offset = v_comp - v_comp_mean
+            voxel_features = torch.cat([voxel_features, v_comp_offset.unsqueeze(-1)], dim=-1)
 
         if self.use_absolute_xyz:
             features = [voxel_features, f_cluster, f_center]
